@@ -240,8 +240,8 @@
 <body>
 
 <header>
-  <h1>Spelling Bee Word Study</h1>
-  <p>Pull a word, hear it, learn it, spell it.</p>
+  <h1>Spelling Bee.</h1>
+  <p>If it breaks, try hitting the button again.</p>
 </header>
 
 <div class="word-buttons">
@@ -443,15 +443,12 @@
     const entry = data.find(e => e.meta && e.meta.id.split(':')[0].toLowerCase() === word.toLowerCase()) || data[0];
     const defs = extractDefinitions(entry);
     
-    // Check if dictionary provided any example sentences
-    const hasExamples = defs.some(d => d.examples && d.examples.length > 0);
-
-    // Call Gemini AI fallback via Google Apps Script backend if dictionary has no examples
-    if (!hasExamples && defs.length > 0) {
+    // Always request a complete standalone AI example sentence for the main definition
+    if (defs.length > 0) {
       setMessage('Generating sample sentence…', false);
       const aiSentence = await fetchAIExampleSentence(word);
       if (aiSentence) {
-        defs[0].examples = [aiSentence.replace(/^["'“]|["'”]$/g, '')];
+        defs[0].examples = [aiSentence];
       }
     }
 
