@@ -112,7 +112,7 @@
 
   .headword-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 14px;
     flex-wrap: wrap;
   }
@@ -120,9 +120,18 @@
   .headword {
     font-family: 'Lora', serif;
     font-weight: 600;
-    font-size: 2.1rem;
+    font-size: 2.4rem;
     color: var(--ink);
     margin: 0;
+    text-transform: lowercase;
+  }
+
+  .syllable-row {
+    font-family: 'Lora', serif;
+    font-size: 1.05rem;
+    color: var(--clay);
+    margin: 4px 0 2px;
+    letter-spacing: 0.03em;
   }
 
   .sound-btn {
@@ -136,13 +145,12 @@
   }
 
   .sound-btn:disabled { opacity: 0.25; cursor: default; }
-
-  .sound-btn svg { width: 20px; height: 20px; }
+  .sound-btn svg { width: 22px; height: 22px; }
 
   .pron-row {
-    margin: 4px 0 2px;
+    margin: 2px 0 6px;
     color: #6F6A5E;
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     font-family: 'Lora', serif;
     font-style: italic;
   }
@@ -152,7 +160,7 @@
     font-style: italic;
     color: var(--clay);
     font-size: 0.95rem;
-    margin: 2px 0 22px;
+    margin: 4px 0 20px;
   }
 
   .definitions {
@@ -166,7 +174,7 @@
     counter-increment: def-counter;
     position: relative;
     padding-left: 28px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
     font-size: 1.02rem;
     line-height: 1.5;
   }
@@ -182,14 +190,13 @@
     font-size: 0.92rem;
   }
 
-  .definitions .example {
+  .example {
     display: block;
     margin-top: 6px;
-    color: #6F6A5E;
+    color: #5C574F;
     font-style: italic;
     font-size: 0.95rem;
-    padding-left: 2px;
-    border-left: 2px solid var(--rule);
+    border-left: 2px solid var(--honey);
     padding-left: 10px;
   }
 
@@ -204,6 +211,8 @@
     font-weight: 600;
     font-size: 0.85rem;
     color: var(--clay);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     margin: 0 0 6px;
   }
 
@@ -224,7 +233,7 @@
 
   @media (max-width: 480px) {
     .card { padding: 28px 22px 26px; }
-    .headword { font-size: 1.7rem; }
+    .headword { font-size: 1.9rem; }
   }
 </style>
 </head>
@@ -248,9 +257,8 @@
 </main>
 
 <script>
-  // ---- Configuration ----
   const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUy6DAMpwLh4oUHcv9HXjObCuQt-JchawCco8--saSUV9qEP839k2UQ7jCfR-8zAmv/exec';
-  const MW_API_KEY = '7ee6e26a-1744-4608-be08-c9b8eb7da922'; // <-- put your dictionaryapi.com Collegiate Dictionary key here
+  const MW_API_KEY = '7ee6e26a-1744-4608-be08-c9b8eb7da922';
   const MW_API_URL = 'https://www.dictionaryapi.com/api/v3/references/collegiate/json/';
 
   const card = document.getElementById('card');
@@ -273,8 +281,6 @@
     return res.json();
   }
 
-  // Strip Merriam-Webster's run-in markup tokens like {it}...{/it}, {wi}...{/wi}, {b}...{/b},
-  // {sx|word||}, {a_link|word}, {d_link|word|word}, {dx}...{/dx}, {ldquo}/{rdquo}, etc.
   function cleanMarkup(str) {
     if (!str) return '';
     return str
@@ -316,20 +322,25 @@
           const sense = senseArr[1];
           if (!sense || !sense.dt) return;
           let text = '';
-          let example = '';
+          let examples = [];
+
           sense.dt.forEach(part => {
-            if (part[0] === 'text') text += cleanMarkup(part[1]);
-            if (part[0] === 'vis' && part[1] && part[1][0]) {
-              example = cleanMarkup(part[1][0].t);
+            if (part[0] === 'text') {
+              text += cleanMarkup(part[1]);
+            } else if (part[0] === 'vis' && Array.isArray(part[1])) {
+              part[1].forEach(visItem => {
+                if (visItem.t) examples.push(cleanMarkup(visItem.t));
+              });
             }
           });
-          if (text) items.push({ text, example });
+
+          if (text) items.push({ text, examples });
         });
       });
     });
-    // Fall back to shortdef if the structured parse comes up empty
+
     if (items.length === 0 && entry.shortdef) {
-      entry.shortdef.forEach(sd => items.push({ text: sd, example: '' }));
+      entry.shortdef.forEach(sd => items.push({ text: sd, examples: [] }));
     }
     return items;
   }
@@ -340,8 +351,11 @@
   }
 
   function render(word, entry) {
-    const hw = cleanMarkup(entry.hwi.hw).replace(/\*/g, '·');
-    const pr = entry.hwi.prs && entry.hwi.prs[0];
+    const rawHw = entry.hwi && entry.hwi.hw ? cleanMarkup(entry.hwi.hw) : word;
+    const cleanHeadword = rawHw.replace(/\*/g, ''); 
+    const syllabified = rawHw.replace(/\*/g, ' · ');
+
+    const pr = entry.hwi && entry.hwi.prs && entry.hwi.prs[0];
     const pronText = pr && pr.mw ? cleanMarkup(pr.mw) : '';
     const audioUrl = pr ? buildAudioUrl(pr.sound) : null;
     const fl = entry.fl || '';
@@ -350,22 +364,26 @@
 
     const defsHtml = defs.length
       ? `<ol class="definitions">${defs.map(d => `
-          <li>${d.text}${d.example ? `<span class="example">${d.example}</span>` : ''}</li>
+          <li>
+            ${d.text}
+            ${d.examples.map(ex => `<span class="example">“${ex}”</span>`).join('')}
+          </li>
         `).join('')}</ol>`
       : `<p class="no-origin">No definition text was returned for this word.</p>`;
 
     card.innerHTML = `
       <div class="headword-row">
-        <h2 class="headword">${hw}</h2>
+        <h2 class="headword">${cleanHeadword}</h2>
         <button class="sound-btn" id="sound-btn" ${audioUrl ? '' : 'disabled'} aria-label="Play pronunciation">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9H4zm11.5 3c0-1.77-.77-3.29-2-4.24v8.48c1.23-.95 2-2.47 2-4.24z"/></svg>
         </button>
       </div>
+      <div class="syllable-row">${syllabified}</div>
       ${pronText ? `<p class="pron-row">\\${pronText}\\</p>` : ''}
       ${fl ? `<p class="fl">${fl}</p>` : ''}
       ${defsHtml}
       <hr class="divider">
-      <p class="origin-label">Origin</p>
+      <p class="origin-label">Language of Origin</p>
       ${etymology ? `<p class="origin-text">${etymology}</p>` : `<p class="no-origin">No etymology on file for this word.</p>`}
     `;
 
