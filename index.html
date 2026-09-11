@@ -294,7 +294,7 @@
   }
 
   function cleanMarkup(str) {
-    if (!str) return '';
+    if (!str || typeof str !== 'string') return '';
     return str
       .replace(/\{bc\}/g, ': ')
       .replace(/\{ldquo\}/g, '“')
@@ -370,8 +370,11 @@
   }
 
   function extractEtymology(entry) {
-    if (!entry.et) return '';
-    return entry.et.map(part => cleanMarkup(part[1])).join(' ');
+    if (!entry.et || !Array.isArray(entry.et)) return '';
+    return entry.et
+      .map(part => (Array.isArray(part) && typeof part[1] === 'string' ? cleanMarkup(part[1]) : ''))
+      .filter(Boolean)
+      .join(' ');
   }
 
   function render(word, entry, defs) {
@@ -442,8 +445,7 @@
 
     const entry = data.find(e => e.meta && e.meta.id.split(':')[0].toLowerCase() === word.toLowerCase()) || data[0];
     const defs = extractDefinitions(entry);
-    
-    // Always request a complete standalone AI example sentence for the main definition
+
     if (defs.length > 0) {
       setMessage('Generating sample sentence…', false);
       const aiSentence = await fetchAIExampleSentence(word);
