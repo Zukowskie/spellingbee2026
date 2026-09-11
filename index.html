@@ -240,8 +240,8 @@
 <body>
 
 <header>
-  <h1>Spelling Bee Word Study</h1>
-  <p>Pull a word, hear it, learn it, spell it.</p>
+  <h1>Spelling Bee.</h1>
+  <p>If it breaks, try hitting the button again.</p>
 </header>
 
 <div class="word-buttons">
@@ -316,26 +316,53 @@
   function extractDefinitions(entry) {
     const items = [];
     const defBlocks = entry.def || [];
+
+    // Recursively extract all sense objects to handle nested structures like 'pseq' or 'bs'
+    function findSenses(node, results = []) {
+      if (!node) return results;
+      if (Array.isArray(node)) {
+        if (node[0] === 'sense' && node[1] && node[1].dt) {
+          results.push(node[1]);
+        } else if (node[0] === 'bs' && node[1] && node[1].sense && node[1].sense.dt) {
+          results.push(node[1].sense);
+        } else {
+          node.forEach(child => findSenses(child, results));
+        }
+      }
+      return results;
+    }
+
     defBlocks.forEach(defBlock => {
-      (defBlock.sseq || []).forEach(sseqGroup => {
-        sseqGroup.forEach(senseArr => {
-          const sense = senseArr[1];
-          if (!sense || !sense.dt) return;
-          let text = '';
-          let examples = [];
+      const senses = findSenses(defBlock.sseq);
+      senses.forEach(sense => {
+        let text = '';
+        let examples = [];
 
-          sense.dt.forEach(part => {
-            if (part[0] === 'text') {
-              text += cleanMarkup(part[1]);
-            } else if (part[0] === 'vis' && Array.isArray(part[1])) {
-              part[1].forEach(visItem => {
-                if (visItem.t) examples.push(cleanMarkup(visItem.t));
-              });
-            }
-          });
-
-          if (text) items.push({ text, examples });
+        (sense.dt || []).forEach(part => {
+          if (part[0] === 'text') {
+            text += cleanMarkup(part[1]);
+          } else if (part[0] === 'vis' && Array.isArray(part[1])) {
+            part[1].forEach(visItem => {
+              if (visItem && visItem.t) {
+                examples.push(cleanMarkup(visItem.t));
+              }
+            });
+          } else if (part[0] === 'uns' && Array.isArray(part[1])) {
+            part[1].forEach(unsGroup => {
+              if (Array.isArray(unsGroup)) {
+                unsGroup.forEach(unsItem => {
+                  if (unsItem[0] === 'vis' && Array.isArray(unsItem[1])) {
+                    unsItem[1].forEach(visItem => {
+                      if (visItem && visItem.t) examples.push(cleanMarkup(visItem.t));
+                    });
+                  }
+                });
+              }
+            });
+          }
         });
+
+        if (text) items.push({ text, examples });
       });
     });
 
@@ -352,8 +379,6 @@
 
   function render(word, entry) {
     const rawHw = entry.hwi && entry.hwi.hw ? cleanMarkup(entry.hwi.hw) : word;
-    
-    // Strips asterisks (*), middle dots (·), and Unicode \u00B7
     const cleanHeadword = rawHw.replace(/[\*·\u00B7]/g, ''); 
     const syllabified = rawHw.split(/[\*·\u00B7]/).filter(Boolean).join(' · ');
 
