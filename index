@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spelling Bee Word Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1B2430;
+    --ink-soft: #2A3648;
+    --paper: #FBF7EE;
+    --honey: #D9A02C;
+    --honey-deep: #B9821E;
+    --charcoal: #2B2A28;
+    --clay: #8A5A3C;
+    --rule: #E3DBC8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(217,160,44,0.08), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(217,160,44,0.06), transparent 45%);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--charcoal);
+    padding: 48px 20px 80px;
+  }
+
+  header {
+    max-width: 640px;
+    margin: 0 auto 28px;
+    text-align: left;
+  }
+
+  header h1 {
+    font-family: 'Lora', serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--paper);
+    margin: 0 0 4px;
+    letter-spacing: 0.01em;
+  }
+
+  header p {
+    color: #9AA6B8;
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .word-buttons {
+    max-width: 640px;
+    margin: 0 auto 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .word-buttons button {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(217,160,44,0.4);
+    background: transparent;
+    color: var(--honey);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  }
+
+  .word-buttons button:hover {
+    background: var(--honey);
+    color: var(--ink);
+  }
+
+  .word-buttons button:active {
+    transform: scale(0.97);
+  }
+
+  .word-buttons button:focus-visible {
+    outline: 2px solid var(--honey);
+    outline-offset: 2px;
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: var(--paper);
+    border-radius: 10px;
+    padding: 36px 40px 32px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    min-height: 200px;
+  }
+
+  .state-message {
+    font-family: 'Inter', sans-serif;
+    color: #7A756A;
+    font-size: 0.95rem;
+  }
+
+  .state-message.error { color: #A6432F; }
+
+  .headword-row {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .headword {
+    font-family: 'Lora', serif;
+    font-weight: 600;
+    font-size: 2.1rem;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .sound-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--clay);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .sound-btn:disabled { opacity: 0.25; cursor: default; }
+
+  .sound-btn svg { width: 20px; height: 20px; }
+
+  .pron-row {
+    margin: 4px 0 2px;
+    color: #6F6A5E;
+    font-size: 0.98rem;
+    font-family: 'Lora', serif;
+    font-style: italic;
+  }
+
+  .fl {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    color: var(--clay);
+    font-size: 0.95rem;
+    margin: 2px 0 22px;
+  }
+
+  .definitions {
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+    counter-reset: def-counter;
+  }
+
+  .definitions li {
+    counter-increment: def-counter;
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 16px;
+    font-size: 1.02rem;
+    line-height: 1.5;
+  }
+
+  .definitions li::before {
+    content: counter(def-counter);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    color: var(--honey-deep);
+    font-family: 'Lora', serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+
+  .definitions .example {
+    display: block;
+    margin-top: 6px;
+    color: #6F6A5E;
+    font-style: italic;
+    font-size: 0.95rem;
+    padding-left: 2px;
+    border-left: 2px solid var(--rule);
+    padding-left: 10px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 24px 0 20px;
+  }
+
+  .origin-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--clay);
+    margin: 0 0 6px;
+  }
+
+  .origin-text {
+    font-family: 'Lora', serif;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: #4A4640;
+    margin: 0;
+  }
+
+  .no-origin {
+    font-size: 0.9rem;
+    color: #A39D8E;
+    font-style: italic;
+    margin: 0;
+  }
+
+  @media (max-width: 480px) {
+    .card { padding: 28px 22px 26px; }
+    .headword { font-size: 1.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Spelling Bee Word Study</h1>
+  <p>Pull a word, hear it, learn it, spell it.</p>
+</header>
+
+<div class="word-buttons">
+  <button onclick="loadWord('A')">New easy word</button>
+  <button onclick="loadWord('B')">New medium word</button>
+  <button onclick="loadWord('C')">New hard word</button>
+</div>
+
+<main>
+  <div class="card" id="card">
+    <p class="state-message">Pick a difficulty above to pull a word.</p>
+  </div>
+</main>
+
+<script>
+  // ---- Configuration ----
+  const SHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUy6DAMpwLh4oUHcv9HXjObCuQt-JchawCco8--saSUV9qEP839k2UQ7jCfR-8zAmv/exec';
+  const MW_API_KEY = '7ee6e26a-1744-4608-be08-c9b8eb7da922'; // <-- put your dictionaryapi.com Collegiate Dictionary key here
+  const MW_API_URL = 'https://www.dictionaryapi.com/api/v3/references/collegiate/json/';
+
+  const card = document.getElementById('card');
+
+  function setMessage(text, isError) {
+    card.innerHTML = `<p class="state-message${isError ? ' error' : ''}">${text}</p>`;
+  }
+
+  async function fetchWord(column) {
+    const res = await fetch(`${SHEET_SCRIPT_URL}?column=${column}`);
+    if (!res.ok) throw new Error('Could not reach the word list.');
+    const data = await res.json();
+    if (!data.word) throw new Error('The word list returned nothing.');
+    return data.word.trim();
+  }
+
+  async function fetchDefinition(word) {
+    const res = await fetch(`${MW_API_URL}${encodeURIComponent(word)}?key=${MW_API_KEY}`);
+    if (!res.ok) throw new Error('The dictionary lookup failed.');
+    return res.json();
+  }
+
+  // Strip Merriam-Webster's run-in markup tokens like {it}...{/it}, {wi}...{/wi}, {b}...{/b},
+  // {sx|word||}, {a_link|word}, {d_link|word|word}, {dx}...{/dx}, {ldquo}/{rdquo}, etc.
+  function cleanMarkup(str) {
+    if (!str) return '';
+    return str
+      .replace(/\{bc\}/g, ': ')
+      .replace(/\{ldquo\}/g, '“')
+      .replace(/\{rdquo\}/g, '”')
+      .replace(/\{it\}|\{\/it\}/g, '')
+      .replace(/\{b\}|\{\/b\}/g, '')
+      .replace(/\{wi\}|\{\/wi\}/g, '')
+      .replace(/\{phrase\}|\{\/phrase\}/g, '')
+      .replace(/\{sx\|([^|}]*)\|[^}]*\}/g, '$1')
+      .replace(/\{a_link\|([^}]*)\}/g, '$1')
+      .replace(/\{d_link\|([^|}]*)\|[^}]*\}/g, '$1')
+      .replace(/\{i_link\|([^|}]*)\|[^}]*\}/g, '$1')
+      .replace(/\{et_link\|([^|}]*)\|[^}]*\}/g, '$1')
+      .replace(/\{dx[^}]*\}|\{\/dx\}/g, '')
+      .replace(/\{dx_def\}|\{\/dx_def\}/g, '')
+      .replace(/\{[^}]*\}/g, '')
+      .trim();
+  }
+
+  function buildAudioUrl(sound) {
+    if (!sound || !sound.audio) return null;
+    const audio = sound.audio;
+    let subdir;
+    if (audio.startsWith('bix')) subdir = 'bix';
+    else if (audio.startsWith('gg')) subdir = 'gg';
+    else if (/^[^a-zA-Z]/.test(audio)) subdir = 'number';
+    else subdir = audio[0];
+    return `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdir}/${audio}.mp3`;
+  }
+
+  function extractDefinitions(entry) {
+    const items = [];
+    const defBlocks = entry.def || [];
+    defBlocks.forEach(defBlock => {
+      (defBlock.sseq || []).forEach(sseqGroup => {
+        sseqGroup.forEach(senseArr => {
+          const sense = senseArr[1];
+          if (!sense || !sense.dt) return;
+          let text = '';
+          let example = '';
+          sense.dt.forEach(part => {
+            if (part[0] === 'text') text += cleanMarkup(part[1]);
+            if (part[0] === 'vis' && part[1] && part[1][0]) {
+              example = cleanMarkup(part[1][0].t);
+            }
+          });
+          if (text) items.push({ text, example });
+        });
+      });
+    });
+    // Fall back to shortdef if the structured parse comes up empty
+    if (items.length === 0 && entry.shortdef) {
+      entry.shortdef.forEach(sd => items.push({ text: sd, example: '' }));
+    }
+    return items;
+  }
+
+  function extractEtymology(entry) {
+    if (!entry.et) return '';
+    return entry.et.map(part => cleanMarkup(part[1])).join(' ');
+  }
+
+  function render(word, entry) {
+    const hw = cleanMarkup(entry.hwi.hw).replace(/\*/g, '·');
+    const pr = entry.hwi.prs && entry.hwi.prs[0];
+    const pronText = pr && pr.mw ? cleanMarkup(pr.mw) : '';
+    const audioUrl = pr ? buildAudioUrl(pr.sound) : null;
+    const fl = entry.fl || '';
+    const defs = extractDefinitions(entry);
+    const etymology = extractEtymology(entry);
+
+    const defsHtml = defs.length
+      ? `<ol class="definitions">${defs.map(d => `
+          <li>${d.text}${d.example ? `<span class="example">${d.example}</span>` : ''}</li>
+        `).join('')}</ol>`
+      : `<p class="no-origin">No definition text was returned for this word.</p>`;
+
+    card.innerHTML = `
+      <div class="headword-row">
+        <h2 class="headword">${hw}</h2>
+        <button class="sound-btn" id="sound-btn" ${audioUrl ? '' : 'disabled'} aria-label="Play pronunciation">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 5V4L8 9H4zm11.5 3c0-1.77-.77-3.29-2-4.24v8.48c1.23-.95 2-2.47 2-4.24z"/></svg>
+        </button>
+      </div>
+      ${pronText ? `<p class="pron-row">\\${pronText}\\</p>` : ''}
+      ${fl ? `<p class="fl">${fl}</p>` : ''}
+      ${defsHtml}
+      <hr class="divider">
+      <p class="origin-label">Origin</p>
+      ${etymology ? `<p class="origin-text">${etymology}</p>` : `<p class="no-origin">No etymology on file for this word.</p>`}
+    `;
+
+    if (audioUrl) {
+      document.getElementById('sound-btn').addEventListener('click', () => {
+        new Audio(audioUrl).play();
+      });
+    }
+  }
+
+  async function loadWord(column) {
+    setMessage('Fetching a word…', false);
+    let word;
+    try {
+      word = await fetchWord(column);
+    } catch (err) {
+      setMessage(`Couldn't get a word from the list: ${err.message}`, true);
+      return;
+    }
+
+    let data;
+    try {
+      data = await fetchDefinition(word);
+    } catch (err) {
+      setMessage(`Couldn't look up "${word}": ${err.message}`, true);
+      return;
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      setMessage(`No dictionary entry found for "${word}".`, true);
+      return;
+    }
+
+    if (typeof data[0] === 'string') {
+      setMessage(`"${word}" wasn't found. Did you mean: ${data.slice(0, 5).join(', ')}?`, true);
+      return;
+    }
+
+    const entry = data.find(e => e.meta && e.meta.id.split(':')[0].toLowerCase() === word.toLowerCase()) || data[0];
+    render(word, entry);
+  }
+</script>
+
+</body>
+</html>
