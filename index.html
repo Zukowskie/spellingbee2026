@@ -352,8 +352,10 @@
 
   function render(word, entry) {
     const rawHw = entry.hwi && entry.hwi.hw ? cleanMarkup(entry.hwi.hw) : word;
-    const cleanHeadword = rawHw.replace(/\*/g, ''); 
-    const syllabified = rawHw.replace(/\*/g, ' · ');
+    
+    // Strips asterisks (*), middle dots (·), and Unicode \u00B7
+    const cleanHeadword = rawHw.replace(/[\*·\u00B7]/g, ''); 
+    const syllabified = rawHw.split(/[\*·\u00B7]/).filter(Boolean).join(' · ');
 
     const pr = entry.hwi && entry.hwi.prs && entry.hwi.prs[0];
     const pronText = pr && pr.mw ? cleanMarkup(pr.mw) : '';
