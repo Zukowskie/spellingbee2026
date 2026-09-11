@@ -240,8 +240,8 @@
 <body>
 
 <header>
-  <h1>Spelling Bee.</h1>
-  <p>If it breaks, try hitting the button again.</p>
+  <h1>Spelling Bee Word Study</h1>
+  <p>Pull a word, hear it, learn it, spell it.</p>
 </header>
 
 <div class="word-buttons">
@@ -281,6 +281,18 @@
     return res.json();
   }
 
+  async function fetchAIExampleSentence(word) {
+    try {
+      const res = await fetch(`${SHEET_SCRIPT_URL}?action=getSentence&word=${encodeURIComponent(word)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.sentence || null;
+    } catch (err) {
+      console.error("Failed to fetch AI sentence:", err);
+      return null;
+    }
+  }
+
   function cleanMarkup(str) {
     if (!str) return '';
     return str
@@ -317,7 +329,6 @@
     const items = [];
     const defBlocks = entry.def || [];
 
-    // Recursively extract all sense objects to handle nested structures like 'pseq' or 'bs'
     function findSenses(node, results = []) {
       if (!node) return results;
       if (Array.isArray(node)) {
@@ -343,21 +354,7 @@
             text += cleanMarkup(part[1]);
           } else if (part[0] === 'vis' && Array.isArray(part[1])) {
             part[1].forEach(visItem => {
-              if (visItem && visItem.t) {
-                examples.push(cleanMarkup(visItem.t));
-              }
-            });
-          } else if (part[0] === 'uns' && Array.isArray(part[1])) {
-            part[1].forEach(unsGroup => {
-              if (Array.isArray(unsGroup)) {
-                unsGroup.forEach(unsItem => {
-                  if (unsItem[0] === 'vis' && Array.isArray(unsItem[1])) {
-                    unsItem[1].forEach(visItem => {
-                      if (visItem && visItem.t) examples.push(cleanMarkup(visItem.t));
-                    });
-                  }
-                });
-              }
+              if (visItem && visItem.t) examples.push(cleanMarkup(visItem.t));
             });
           }
         });
@@ -377,7 +374,7 @@
     return entry.et.map(part => cleanMarkup(part[1])).join(' ');
   }
 
-  function render(word, entry) {
+  function render(word, entry, defs) {
     const rawHw = entry.hwi && entry.hwi.hw ? cleanMarkup(entry.hwi.hw) : word;
     const cleanHeadword = rawHw.replace(/[\*·\u00B7]/g, ''); 
     const syllabified = rawHw.split(/[\*·\u00B7]/).filter(Boolean).join(' · ');
@@ -386,7 +383,6 @@
     const pronText = pr && pr.mw ? cleanMarkup(pr.mw) : '';
     const audioUrl = pr ? buildAudioUrl(pr.sound) : null;
     const fl = entry.fl || '';
-    const defs = extractDefinitions(entry);
     const etymology = extractEtymology(entry);
 
     const defsHtml = defs.length
@@ -439,18 +435,27 @@
       return;
     }
 
-    if (!Array.isArray(data) || data.length === 0) {
+    if (!Array.isArray(data) || data.length === 0 || typeof data[0] === 'string') {
       setMessage(`No dictionary entry found for "${word}".`, true);
       return;
     }
 
-    if (typeof data[0] === 'string') {
-      setMessage(`"${word}" wasn't found. Did you mean: ${data.slice(0, 5).join(', ')}?`, true);
-      return;
+    const entry = data.find(e => e.meta && e.meta.id.split(':')[0].toLowerCase() === word.toLowerCase()) || data[0];
+    const defs = extractDefinitions(entry);
+    
+    // Check if dictionary provided any example sentences
+    const hasExamples = defs.some(d => d.examples && d.examples.length > 0);
+
+    // Call Gemini AI fallback via Google Apps Script backend if dictionary has no examples
+    if (!hasExamples && defs.length > 0) {
+      setMessage('Generating sample sentence…', false);
+      const aiSentence = await fetchAIExampleSentence(word);
+      if (aiSentence) {
+        defs[0].examples = [aiSentence.replace(/^["'“]|["'”]$/g, '')];
+      }
     }
 
-    const entry = data.find(e => e.meta && e.meta.id.split(':')[0].toLowerCase() === word.toLowerCase()) || data[0];
-    render(word, entry);
+    render(word, entry, defs);
   }
 </script>
 
